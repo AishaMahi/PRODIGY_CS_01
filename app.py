@@ -1,39 +1,66 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-def caesar_cipher(text, shift, operation):
-    lower_case = list("abcdefghijklmnopqrstuvwxyz")
-    upper_case = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-    result_text = ""
+def encryption(plain_text, shift_key):
+    lower_case = 'abcdefghijklmnopqrstuvwxyz'
+    upper_case = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    cipher_text = ''
 
-    for char in text:
+    for char in plain_text:
         if char in lower_case:
             position = lower_case.index(char)
-            new_position = (position + shift) % 26 if operation == "encrypt" else (position - shift + 26) % 26
-            result_text += lower_case[new_position]
+            new_position = (position + shift_key) % 26
+            cipher_text += lower_case[new_position]
         elif char in upper_case:
             position = upper_case.index(char)
-            new_position = (position + shift) % 26 if operation == "encrypt" else (position - shift + 26) % 26
-            result_text += upper_case[new_position]
+            new_position = (position + shift_key) % 26
+            cipher_text += upper_case[new_position]
         else:
-            result_text += char
-    
-    return result_text
+            cipher_text += char
 
-@app.route('/')
+    return cipher_text
+
+def decryption(cipher_text, shift_key):
+    lower_case = 'abcdefghijklmnopqrstuvwxyz'
+    upper_case = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    plain_text = ''
+
+    for char in cipher_text:
+        if char in lower_case:
+            position = lower_case.index(char)
+            new_position = (position - shift_key + 26) % 26
+            plain_text += lower_case[new_position]
+        elif char in upper_case:
+            position = upper_case.index(char)
+            new_position = (position - shift_key + 26) % 26
+            plain_text += upper_case[new_position]
+        else:
+            plain_text += char
+
+    return plain_text
+
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template('index.html')
+    result = ''
+    if request.method == 'POST':
+        action = request.form.get('action')
+        text = request.form.get('text')
+        shift = request.form.get('shift')
 
-@app.route('/process', methods=['POST'])
-def process():
-    data = request.get_json()
-    text = data['message']
-    shift = int(data['shift'])
-    operation = data['operation']
-    
-    result = caesar_cipher(text, shift, operation)
-    return jsonify({'result': result})
+        try:
+            shift_key = int(shift)
+        except ValueError:
+            result = "Invalid shift key"
+        else:
+            if action == 'encrypt':
+                result = encryption(text, shift_key)
+            elif action == 'decrypt':
+                result = decryption(text, shift_key)
+            else:
+                result = "Invalid action"
+
+    return render_template('index.html', result=result)
 
 if __name__ == '__main__':
     app.run(debug=True)
